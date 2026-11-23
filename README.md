@@ -6,6 +6,10 @@
 
 **Status:** Live on testnet. The full loop is proven on-chain — payment in, split out, 1 second.
 
+## Demo video
+
+https://youtu.be/dnycFv6sxzs
+
 ## Why this exists
 
 Agent wallets are moved by hand, and a hand move goes wrong once too often. On 31 Oct 2026 a manual transfer sent steve54's full 11,250 IAO to the wrong wallet — the whole balance, gone to an address it was never meant for. Payday Splitter removes that mistake class entirely: the destinations are fixed at deploy time, the split ratios are fixed at deploy time, and no human ever types an address or an amount again. Every payment that lands in the vault is split the same way, every time, with no one watching.
@@ -61,6 +65,15 @@ One payment of 1,000 MPT, 23 Nov 2026:
 
 **Latency: 1 second** (payment block timestamp → split block timestamp). Vault balance after the split: **0**. The split transaction carries the `Split` event plus three `Transfer` logs — 700 MPT to main, 200 MPT to savings, 100 MPT to the gas reserve.
 
+Second live run (the one in the demo video), 23 Nov 2026:
+
+| Step | Transaction | Block |
+|---|---|---|
+| Payment: 1,000 MPT sent to the vault | `0x56ec09a0484af0e1ad0f8943ea9c460dc7160f3a534d127be54612a17e22c1b1` | 62502902 (Base Sepolia) |
+| Split: 700 / 200 / 100 MPT sent out | `0xd8b3e71081ac4cf1392701db041b68569b7f4badc02e196e7ba733e38d467638` | 62502908 (Base Sepolia) |
+
+Latency again 1 second. Cumulative split so far across all runs: main 2,800 / savings 800 / gas 400 MPT.
+
 Deployment transactions:
 
 | Step | Transaction |
@@ -95,7 +108,7 @@ forge test
 ## What this is not
 
 - **Testnet only.** Base Sepolia + Lasna, a MockERC20 test token (MPT), no real money anywhere.
-- **No frontend.** The vault and the reactive contract are the product; the demo is the on-chain loop.
+- **Frontend.** A read-only site in `frontend/` — the story, the loop, live on-chain data and the demo video. No wallet connection, no transactions.
 - **No mainnet.** Destinations and shares are fixed at deploy by design — that is the point — but nothing here touches mainnet funds.
 
 ## Project layout

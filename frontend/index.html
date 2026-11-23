@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Payday Splitter — every payment landing in the agent vault is automatically split 70% main, 20% savings, 10% gas reserve, by a Reactive contract. Set it and forget it.">
+  <title>Payday Splitter — Set It and Forget It</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a1120'/%3E%3Crect x='6' y='14' width='7' height='12' rx='2' fill='%232ee6a8'/%3E%3Crect x='14' y='9' width='7' height='17' rx='2' fill='%236ea8fe'/%3E%3Crect x='22' y='18' width='4' height='8' rx='2' fill='%23f5a623'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top">Payday&nbsp;Splitter</a>
+      <nav class="header-nav">
+        <a href="#how">How it works</a>
+        <a href="#live">Live</a>
+        <a href="#contracts">Contracts</a>
+        <a href="#video">Demo</a>
+        <a class="repo-link" href="https://github.com/canyahale/Payday-splitter" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="wrap">
+        <p class="badge">Reactive Omni Buildathon · Set It and Forget It</p>
+        <h1>Payday Splitter</h1>
+        <p class="tagline">Set it and forget it.</p>
+        <p class="lede">Every payment landing in the agent vault is automatically split — <strong>70% main wallet, 20% savings, 10% gas reserve</strong> — by a Reactive contract. No one watches. Nobody clicks anything.</p>
+        <p class="story">An agent gets paid. Someone moves the money by hand. One wrong address — and the whole payment is gone. That happened to us: <strong class="loss">11,250 IAO</strong>, sent to the wrong wallet in a single manual transfer. Payday Splitter fixes the destinations when the vault is deployed, so no one ever types an address again.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#video">Watch the demo</a>
+          <a class="btn btn-ghost" href="https://github.com/canyahale/Payday-splitter" target="_blank" rel="noopener">View the code</a>
+        </div>
+        <dl class="hero-stats">
+          <div><dt>Split</dt><dd>70 / 20 / 10</dd></div>
+          <div><dt>Full-loop latency</dt><dd>1 second</dd></div>
+          <div><dt>Left in the vault</dt><dd>0 MPT</dd></div>
+          <div><dt>Network</dt><dd>Testnet only</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section id="how" class="section">
+      <div class="wrap">
+        <h2>How the loop works</h2>
+        <p class="section-intro">A payment lands. The Reactive contract sees it. The vault splits it. Nobody is watching.</p>
+
+        <div class="loop" role="img" aria-label="Payment of 1,000 MPT goes to the vault on Base Sepolia, the Reactive contract on Lasna sees the transfer event, requests a callback, and the vault splits 700 to main, 200 to savings, 100 to gas.">
+          <div class="loop-node">
+            <span class="loop-step">1</span>
+            <strong>Payment</strong>
+            <span>1,000 MPT</span>
+          </div>
+          <div class="loop-link" aria-hidden="true"></div>
+          <div class="loop-node">
+            <span class="loop-step">2</span>
+            <strong>Vault</strong>
+            <span>Base Sepolia</span>
+          </div>
+          <div class="loop-link" aria-hidden="true"></div>
+          <div class="loop-node">
+            <span class="loop-step">3</span>
+            <strong>Reactive</strong>
+            <span>Lasna · sees the event</span>
+          </div>
+          <div class="loop-link" aria-hidden="true"></div>
+          <div class="loop-node">
+            <span class="loop-step">4</span>
+            <strong>Callback</strong>
+            <span>split it</span>
+          </div>
+          <div class="loop-link" aria-hidden="true"></div>
+          <div class="loop-node loop-node-split">
+            <span class="loop-step">5</span>
+            <strong>Split</strong>
+            <span>700 / 200 / 100</span>
+          </div>
+        </div>
+
+        <ol class="steps">
+          <li>
+            <strong>SplitterVault — Base Sepolia.</strong>
+            It holds incoming payments and can only split when its <code>callback()</code> is called by the Reactive callback proxy, with the sender equal to the PaydayReactive address fixed at deploy. It cannot trigger itself — without Reactive, nothing splits.
+          </li>
+          <li>
+            <strong>PaydayReactiveOmni — Lasna.</strong>
+            It subscribes to <code>Transfer(token, *, vault)</code> events on Base Sepolia. When one fires, <code>react()</code> requests a callback to the vault with the token and amount.
+          </li>
+          <li>
+            <strong>The callback delivers the split.</strong>
+            The callback proxy on Base Sepolia calls the vault, and the vault sends 70% to the main wallet, 20% to savings, 10% to the gas reserve. The rounding remainder goes to the gas reserve. Shares and destinations are set once, at deploy — that is the point.
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ LIVE ON-CHAIN ============ -->
+    <section id="live" class="section section-live">
+      <div class="wrap">
+        <h2>Live on-chain</h2>
+        <p class="section-intro">Read straight from the Base Sepolia RPC in your browser. No wallet, no signing — just public chain data.</p>
+
+        <p class="live-status" id="live-status" role="status"><span class="status-dot status-loading"></span> Loading live data…</p>
+
+        <div class="live-grid">
+          <div class="live-card">
+            <h3>Vault balance</h3>
+            <p class="live-big" id="vault-balance">—</p>
+            <p class="live-sub">MPT sitting in the vault right now</p>
+          </div>
+          <div class="live-card">
+            <h3>Total split so far</h3>
+            <p class="live-big" id="total-split">—</p>
+            <p class="live-sub">MPT split across all payments</p>
+          </div>
+          <div class="live-card">
+            <h3>Latest loop latency</h3>
+            <p class="live-big" id="latest-latency">—</p>
+            <p class="live-sub">Payment block → split block</p>
+          </div>
+        </div>
+
+        <div class="split-bars" id="split-bars">
+          <div class="split-row">
+            <span class="split-label">Main · 70%</span>
+            <div class="bar"><div class="bar-fill bar-main" id="bar-main" style="width:0%"></div></div>
+            <span class="split-value" id="val-main">—</span>
+          </div>
+          <div class="split-row">
+            <span class="split-label">Savings · 20%</span>
+            <div class="bar"><div class="bar-fill bar-savings" id="bar-savings" style="width:0%"></div></div>
+            <span class="split-value" id="val-savings">—</span>
+          </div>
+          <div class="split-row">
+            <span class="split-label">Gas reserve · 10%</span>
+            <div class="bar"><div class="bar-fill bar-gas" id="bar-gas" style="width:0%"></div></div>
+            <span class="split-value" id="val-gas">—</span>
+          </div>
+        </div>
+
+        <div class="latest-loop">
+          <h3>Latest loop</h3>
+          <dl>
+            <div>
+              <dt>Payment</dt>
+              <dd><a id="pay-tx" href="#" target="_blank" rel="noopener">—</a> <span class="muted" id="pay-block"></span></dd>
+            </div>
+            <div>
+              <dt>Split (callback)</dt>
+              <dd><a id="split-tx" href="#" target="_blank" rel="noopener">—</a> <span class="muted" id="split-block"></span></dd>
+            </div>
+          </dl>
+          <p class="live-note" id="live-note"></p>
+        </div>
+
+        <button class="btn btn-ghost" id="refresh-live" type="button">Refresh live data</button>
+      </div>
+    </section>
+
+    <!-- ============ WHAT BROKE ============ -->
+    <section class="section">
+      <div class="wrap">
+        <h2>What broke along the way</h2>
+        <p class="section-intro">The honest build log — the failures are part of the submission, not hidden.</p>
+        <ol class="steps">
+          <li>
+            <strong>The first version could never run.</strong>
+            It used Reactive's legacy pattern (<code>vmOnly</code>), but the RVM no longer exists on Omni, so <code>react()</code> reverted on entry. That contract is blacklisted with a small debt and its vault's 1,000 MPT is stranded. The port to the Omni pattern (<code>onlySystem</code> + <code>SYSTEM.subscribe</code> + <code>requestCallbackV_1_0</code>) fixed it.
+          </li>
+          <li>
+            <strong>Then the callback ran out of gas.</strong>
+            The callback needs 148,700 gas, but a 300,000 limit only delivers about 144,776 after the proxy overhead — short by 3,924. Raising the limit to 400,000 and redeploying both contracts produced the working loop.
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ CONTRACTS ============ -->
+    <section id="contracts" class="section">
+      <div class="wrap">
+        <h2>Contracts</h2>
+        <p class="section-intro">Testnet only. No real money anywhere.</p>
+
+        <div class="contract-grid">
+          <article class="contract-card">
+            <h3>SplitterVault <span class="tag">v3</span></h3>
+            <p class="contract-chain">Base Sepolia · chain 84532</p>
+            <p class="address"><code>0xB919828FfF2e6b3B6f7a3E5e8033b831e6545e9E</code></p>
+            <div class="contract-actions">
+              <button type="button" class="copy-btn" data-copy="0xB919828FfF2e6b3B6f7a3E5e8033b831e6545e9E">Copy</button>
+              <a href="https://sepolia.basescan.org/address/0xB919828FfF2e6b3B6f7a3E5e8033b831e6545e9E" target="_blank" rel="noopener">Basescan ↗</a>
+            </div>
+          </article>
+
+          <article class="contract-card">
+            <h3>PaydayReactiveOmni <span class="tag">v2</span></h3>
+            <p class="contract-chain">Lasna · chain 5318007</p>
+            <p class="address"><code>0x4613485BE1C213361BD48F1e34C95E7694E014eD</code></p>
+            <div class="contract-actions">
+              <button type="button" class="copy-btn" data-copy="0x4613485BE1C213361BD48F1e34C95E7694E014eD">Copy</button>
+              <a href="https://lasna.reactscan.net/address/0x4613485BE1C213361BD48F1e34C95E7694E014eD" target="_blank" rel="noopener">Reactscan ↗</a>
+            </div>
+          </article>
+
+          <article class="contract-card">
+            <h3>MockERC20 · MPT <span class="tag">test token</span></h3>
+            <p class="contract-chain">Base Sepolia · chain 84532</p>
+            <p class="address"><code>0x43a33C4AeC29DB91c655eAB44417545ceCeD21A1</code></p>
+            <div class="contract-actions">
+              <button type="button" class="copy-btn" data-copy="0x43a33C4AeC29DB91c655eAB44417545ceCeD21A1">Copy</button>
+              <a href="https://sepolia.basescan.org/address/0x43a33C4AeC29DB91c655eAB44417545ceCeD21A1" target="_blank" rel="noopener">Basescan ↗</a>
+            </div>
+          </article>
+        </div>
+
+        <h3 class="subhead">Destinations — fixed at deploy</h3>
+        <table class="dest-table">
+          <thead>
+            <tr><th>Share</th><th>Wallet</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>70% · Main</strong></td>
+              <td><code>0x77D3bbBAe111399a69a33b9feeC639fC3B155894</code></td>
+              <td><button type="button" class="copy-btn" data-copy="0x77D3bbBAe111399a69a33b9feeC639fC3B155894">Copy</button></td>
+            </tr>
+            <tr>
+              <td><strong>20% · Savings</strong></td>
+              <td><code>0x6B9eE8C207F3258c023C0863DD8c638DD921cc66</code></td>
+              <td><button type="button" class="copy-btn" data-copy="0x6B9eE8C207F3258c023C0863DD8c638DD921cc66">Copy</button></td>
+            </tr>
+            <tr>
+              <td><strong>10% · Gas reserve</strong></td>
+              <td><code>0x92760589D753E606D3AB6a2FC15be6D9Aa366B3c</code></td>
+              <td><button type="button" class="copy-btn" data-copy="0x92760589D753E606D3AB6a2FC15be6D9Aa366B3c">Copy</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ DEMO VIDEO ============ -->
+    <section id="video" class="section">
+      <div class="wrap">
+        <h2>Demo video</h2>
+        <p class="section-intro">One minute, four seconds. A fresh 1,000 MPT payment goes in and splits 700 / 200 / 100 — live, on camera.</p>
+        <div class="video-embed">
+          <iframe src="https://www.youtube-nocookie.com/embed/dnycFv6sxzs" title="Payday Splitter demo video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+        <p class="video-link"><a href="https://youtu.be/dnycFv6sxzs?si=wH3khwOo-hYVgKiF" target="_blank" rel="noopener">Watch on YouTube ↗</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p><strong>Payday Splitter</strong> — built for the <strong>Reactive Omni Buildathon</strong>, Set It and Forget It track.</p>
+      <p>
+        <a href="https://github.com/canyahale/Payday-splitter" target="_blank" rel="noopener">GitHub — canyahale/Payday-splitter ↗</a>
+        · MIT licence
+      </p>
+      <p class="muted">Testnet only — Base Sepolia + Lasna, MockERC20 test token. No real money anywhere. Read-only site: no wallet connection, no transactions.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
