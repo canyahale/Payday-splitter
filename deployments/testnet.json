@@ -1,0 +1,162 @@
+{
+  "blockers": [
+    "No Base Sepolia ETH for the fresh deployer. All faucets need a human step: Alchemy needs >=0.001 ETH mainnet balance; QuickNode/Chainlink need a browser wallet connection; QuickNode/Zalalena need a CAPTCHA; Superchain/Coinbase CDP/Chainstack need sign-in. Fix: browser task or Isaiah claims 0.1 ETH to 0x7cBB9C2267E208E031E7a81Ef8A48642202FbE56 (QuickNode https://faucet.quicknode.com/drip or Alchemy https://www.alchemy.com/faucets/base-sepolia). The Lasna lREACT faucet is on-chain and needs no human check (0.1 ETH -> 10 lREACT via 0x2afaFD298b23b62760711756088F75B7409f5967 on Base Sepolia).",
+    "Exec-originated network calls (curl, cast RPC) need user approval that timed out twice (2026-11-22 ~20:16 and ~21:05 WAT). Do not re-run deploy commands until approval is granted.",
+    "Legacy-vs-Omni risk: scaffold uses the legacy reactive pattern; new legacy-pattern deployments on Omni Lasna are unproven. If the live loop never fires, diagnose via Reactscan + MCP trace_origin_event and be ready to port PaydayReactive to the Omni pattern."
+  ],
+  "contracts": {
+    "reactive": "0x7a41A895375394Fd47E973e113EC7aA582f4204a",
+    "token": "0x43a33C4AeC29DB91c655eAB44417545ceCeD21A1",
+    "vault": "0x086a674515B4de3A805055C41F9819D8b6E4d686"
+  },
+  "deployer": {
+    "address": "0x7cBB9C2267E208E031E7a81Ef8A48642202FbE56",
+    "key_file": ".deployer.json (chmod 600, testnet-only, never mainnet)",
+    "note": "CORRECTION: deployer held 0.05 ETH on Base Sepolia, not 0.2 — the quoted hex 0xb1a2bc2ec50000 decodes to 50000000000000000 wei = 0.05 ETH. Deploy proceeded on a scaled-down plan (0.02 ETH swapped, 0.02 ETH vault reserves)."
+  },
+  "destinations": {
+    "gas_reserve": "0x92760589D753E606D3AB6a2FC15be6D9Aa366B3c",
+    "key_file": ".destinations.json (chmod 600)",
+    "main": "0x77D3bbBAe111399a69a33b9feeC639fC3B155894",
+    "savings": "0x6B9eE8C207F3258c023C0863DD8c638DD921cc66"
+  },
+  "diagnosis": {
+    "conclusion": "LOOP FAILED — proven root cause: the legacy react() can never run on Omni Lasna. The event WAS picked up and react() WAS called (reactive tx 0x870161a8dd76aeae8a307f21902ef3fd32ea54e4cc22d29dc3337c21bfd646f0, block 9008101, gasUsed 99823) but it reverted with 'VM only': the legacy vmOnly modifier requires the RVM, which no longer exists on Omni. No PaymentSeen/Callback was emitted, so the 10-minute log poll saw nothing. Second compounding failure: the 1 lREACT reserves were deposited to the LEGACY system contract (0xfffFfF), but Omni charges reactions on the OMNI system contract (0x8888...), where the contract had 0 reserves — the reverted reaction was still charged, leaving 0.0123389 REACT debt on the Omni side, and the contract is now BLACKLISTED with its subscription inactive (get_rc_health: IN_DEBT_BLOCKED, 1 subscription, 0 active).",
+    "evidence": [
+      "MCP trace_origin_event (2026-11-22 ~22:45 WAT): verdict REACT_REVERTED (proven); sequencing SEQUENCED_CARRIED — origin block 62324070 processed in Reactive block 9008101, log matched an active subscriber; reaction REACT_REVERTED — react() reverted ('VM only'), route omni (0x8888...8888).",
+      "MCP get_rc_health (same time): IN_DEBT_BLOCKED (proven) — Omni debt 0.0123389 REACT, reserves 0; legacy proxy debt 0, reserves 1 REACT; PaymentFailure + BlacklistContract at block 9008101.",
+      "On-chain: subscription DID register (legacy system contract emitted the subscription event in the deploy tx receipt, correct chain/token/topic/vault). Vault holds the 1,000 MPT. Debt 0 on legacy proxy and callback proxy; vault still holds 1,000 MPT, unsplit.",
+      "Docs (dev.reactive.network, Legacy vs Omni): 'Contracts already deployed on legacy continue to work... The code changes below apply only when writing NEW reactive contracts.' Drop vm, react() becomes onlySystem, callbacks go through SYSTEM.requestCallbackV_1_0, system contract is 0x8888.... MCP server instructions: 'Never use Legacy APIs (vmOnly, service.subscribe, emit Callback).'"
+    ],
+    "fix_required": "Port PaydayReactive to the Omni pattern (onlySystem + SYSTEM.subscribe on 0x8888... + SYSTEM.requestCallbackV_1_0); the MCP plan_rc + get_rc_template tools give the correct template. The vault must be REDEPLOYED with the new reactive address (ported contract deploys at the deployer's next Lasna nonce, a new address; the old vault immutably points at 0x7a41... and its 1,000 MPT is stranded test tokens). Fund the OMNI system contract reserves for the new reactive address (suggested ~0.17 lREACT: clears any debt + 10 reactions). Remaining funds are enough for the redo: deployer holds ~0.886 lREACT on Lasna and ~0.0099 ETH on Base Sepolia; the 1 lREACT in legacy-proxy reserves is stranded. No new faucet claim needed."
+  },
+  "latency_seconds": null,
+  "networks": {
+    "base_sepolia": {
+      "callback_proxy": "0x476F44b11F5C942c58f4c8E3d0300E5710743585",
+      "chain_id": 84532,
+      "explorer": "https://sepolia.basescan.org",
+      "rpc": "https://sepolia.base.org"
+    },
+    "lasna": {
+      "chain_id": 5318007,
+      "explorer": "https://lasna.reactscan.net",
+      "legacy_system_contract": "0x0000000000000000000000000000000000fffFfF",
+      "omni_system_contract": "0x8888888888888888888888888888888888888888",
+      "rpc": "https://lasna-rpc.rnk.dev/"
+    }
+  },
+  "payment_block_timestamp": 1795386682,
+  "predicted_reactive_address": "0x7a41A895375394Fd47E973e113EC7aA582f4204a",
+  "prepared_at": "2026-11-22T21:10:00+01:00",
+  "project": "Payday Splitter",
+  "runbook": "DEPLOY-RUNBOOK.md",
+  "shares_bps": {
+    "gas": 1000,
+    "main": 7000,
+    "savings": 2000
+  },
+  "status": "LIVE LOOP SUCCEEDED — Payday Splitter splits end-to-end on Omni (vault v3 + RC v2, gas limit 400000). See omni_redeploy.",
+  "tests": {
+    "forge_test": "28/28 pass (2026-11-22)"
+  },
+  "track": "Reactive Omni Buildathon — Set It and Forget It",
+  "tx_hashes": {
+    "callback_split_tx": null,
+    "deploy_reactive": "0xc1c484cbfbe81e73323d9869d36e66bca7f47698ae191cbf749b807f941a368e",
+    "deploy_token": "0xf4015d7d3b7cffdb0919d3e213b9d2f6cf37ca8e75a5a4acf5bcae25cb608128",
+    "deploy_vault": "0xa5175edf316e41b98c79fa9d84556579d4bbe00094b58352a952378fbb8d63aa",
+    "faucet_lreact": "0x710a23a50cbc45161e8268ae136beea6312dad0c0557188622c6caefb3306840",
+    "fund_reactive_reserves": "0x2a48628220f8361c64d70e8f3e5f3a68e7ecb18b24899204f2dd5bf54fcccd64",
+    "fund_vault_reserves": "0x7d4233846190e6d83d95e8a508d05460bbe4c79668c62a98d12f417dd5d5731b",
+    "mint_token": "0xef20d1bc3e805a498eff1d7e0ef3194cc7d743622cd568781d703925cb050335",
+    "payment_to_vault": "0x55f513b977aeb5df15d9a3b87e70d4e34722fabde51e24a0bf05dabf5971119e",
+    "reactive_tx": "0x870161a8dd76aeae8a307f21902ef3fd32ea54e4cc22d29dc3337c21bfd646f0"
+  },
+  "omni_port": {
+    "prepared_at": "2026-11-22T23:55:00+01:00",
+    "status": "READY — awaiting Isaiah yes to redeploy; nothing deployed",
+    "contract": "src/PaydayReactiveOmni.sol",
+    "tests": "test/PaydayReactiveOmni.t.sol — 15 new tests; full suite 43/43 pass (forge build clean)",
+    "deploy_script": "script/DeployReactiveOmni.s.sol",
+    "library": "reactive-lib-omni commit 3ade0dc (lib/reactive-lib-omni, remapping @reactive/=lib/reactive-lib-omni/)",
+    "template_source": "MCP plan_rc + get_rc_template (reactive-lib-omni@3ade0dc, reactive-docs@a7904f2)",
+    "mcp_validation": {
+      "check_rc_source": "OK_SOURCE, 0 findings (ported contract); vault check is CALLBACK_UNGUARDED but a false positive — legacy authorizedSenderOnly + sender==reactiveContract checks are the equivalents of onlyServiceProvider + onlyCallbackSender",
+      "decode_callback": "OK_CALLBACK, no defects — payload selector 0x246a9512, ~144776 gas reaches vault from 300000 limit (130000 proxy overhead); old vault debt 0, reserves 0.02 ETH"
+    },
+    "predicted_reactive_address": "0xBC6D6F936AeB6519d1b7C4Ed9c952B84207Aaf91",
+    "predicted_from": "deployer Lasna nonce 2 (verified 2026-11-22 ~23:50 WAT)",
+    "observed_balances_2026_11_22_2350_WAT": {
+      "deployer_lasna_lreact": "0.886476 (886475999998864760 wei)",
+      "deployer_base_sepolia_eth": "0.009986 (9985913423529834 wei)"
+    },
+    "vault_compatibility": "Vault interface UNCHANGED. Payload is abi.encodeWithSignature(\"callback(address,bytes)\", address(0), abi.encode(token, amount)); network overwrites the address(0) slot with the RC address, so the proxy calls vault.callback(newRC, abi.encode(token, amount)). Vault MUST still be redeployed with the new RC address (immutable).",
+    "runbook": "DEPLOY-RUNBOOK.md §7"
+  },
+  "omni_redeploy": {
+    "status": "LIVE LOOP SUCCEEDED 2026-11-23 ~06:51 WAT (after a gas-limit fix redeploy)",
+    "deployed_at": "2026-11-23T06:51:00+01:00",
+    "contracts": {
+      "reactive_omni_v2": "0x4613485BE1C213361BD48F1e34C95E7694E014eD",
+      "vault_v3": "0xB919828FfF2e6b3B6f7a3E5e8033b831e6545e9E",
+      "token_reused": "0x43a33C4AeC29DB91c655eAB44417545ceCeD21A1"
+    },
+    "callback_gas_limit": 400000,
+    "tx_hashes": {
+      "deploy_vault_v3": "0x73830d78bb2770c3ea39674b6602e128e340fce2467b5be6f15a6f336108d9fc",
+      "deploy_reactive_v2": "0xa2a6aaccfd4ab64e08ce7a36a6aa94f2dc3a90a09cbb4ab4ffa493c1dd6502d9",
+      "fund_reactive_reserves": "0x9bc03e4f0da6d051090e741122d7750d244b22a4e39bb62a35136e68aab0020d",
+      "fund_vault_reserves": "0x26cb08d8184fc205aa7c61684a359a4d35f5179bb6076511ebdac97b36e9b15b",
+      "payment_to_vault": "0xdc88c361bc4ca1f24fab2f030ea55e54ff48b823d418614842bb7e29297fe85d",
+      "reactive_tx": "0xb2fc4b61f0e0c9aba392c944b4c7d2c2d6853cf2e881e5ea3a5dd084e05da6a6",
+      "callback_split_tx": "0x7555e7151980c0b30a0f3b6d6c829f56baf1f46ad754058a307e8a8e84a4e61c"
+    },
+    "live_loop": {
+      "payment_block": 62455932,
+      "payment_block_timestamp": 1795413055,
+      "reactive_block": 9032981,
+      "reactive_gas_used": 77600,
+      "split_block": 62455940,
+      "split_block_timestamp": 1795413056,
+      "latency_seconds": 1,
+      "split_amounts_mpt": {
+        "main": 700,
+        "savings": 200,
+        "gas_reserve": 100
+      },
+      "vault_balance_after": 0,
+      "proof": "MCP trace_origin_event: SEQUENCED_CARRIED + REACTED (1 callback); split tx receipt status 1 with Split event + 3 Transfer logs; no CallbackFailure for vault v3"
+    },
+    "gas_fix_story": {
+      "first_omni_attempt": {
+        "reactive": "0xBC6D6F936AeB6519d1b7C4Ed9c952B84207Aaf91",
+        "vault": "0x2d7A3aEfAc1a1358FB5DE4cDB6FD8666807f4a86",
+        "callback_gas_limit": 300000,
+        "payment_tx": "0x22d447b9cde49c81e0e4985774ce43161722b99776a2352dbbb6188cf66e3576",
+        "payment_block": 62454000,
+        "reactive_tx": "0xf65465a37195dfe1232a6e85d7252cae36e9cf7104dfee74e482fa5b11c02751",
+        "reactive_block": 9032618,
+        "callback_failure_tx": "0x856b629f3aaea8839f59f38efbd2bac45503d1f430deb26260cf1237ec9540d9",
+        "callback_failure_block": 62454009,
+        "diagnosis": "react() SUCCEEDED (Omni port works) but the vault callback reverted: the callback needs 148700 gas (cast estimate; replay with 144776 gas reverts, with 200000 succeeds), while a 300000 limit only delivers ~144776 after 130000 proxy overhead + ~25224 intrinsic. Shortfall was just 3924 gas.",
+        "stranded": "vault v2 keeps its 1000 MPT (can never split); RC v1 keeps 0.1572478 lREACT Omni reserves and stays funded but its vault is dead"
+      },
+      "fix": "Raised CALLBACK_GAS_LIMIT to 400000 (delivers ~244776 to the vault) and redeployed BOTH contracts per runbook §7.2 fallback. New RC at deployer Lasna nonce 4 (predicted 0x4613485BE1C213361BD48F1e34C95E7694E014eD, matched exactly)."
+    },
+    "funding": {
+      "reactive_reserves_lreact": 0.17,
+      "vault_reserves_eth": 0.004,
+      "vault_reserves_note": "0.004 ETH not 0.005 — deployer held only 0.0049765 ETH at that point; one callback costs ~0.0000014 ETH, so 0.004 covers ~2800 callbacks"
+    },
+    "remaining_balances_2026_11_23_0655_WAT": {
+      "deployer_lasna_lreact": "0.2994756 (299475599996394756 wei)",
+      "deployer_base_sepolia_eth": "0.0009671 (967083071523740 wei)",
+      "deployer_mpt": 997000,
+      "rc_v2_omni_reserves_lreact": "0.1572478",
+      "rc_v2_omni_debt": 0,
+      "vault_v3_proxy_reserves_eth": "0.0039986"
+    },
+    "deploy_token_fix": "DeployToken.s.sol msg.sender bug FIXED 2026-11-23 (mints to vm.addr(PRIVATE_KEY) instead of msg.sender inside the broadcast); forge build clean. Token was NOT redeployed — the existing token is reused."
+  }
+}

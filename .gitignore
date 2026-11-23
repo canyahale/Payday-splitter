@@ -1,0 +1,15 @@
+# Compiler files
+/cache
+/out
+
+# Broadcast logs
+/broadcast
+
+# Dependencies (install with `forge install`, see README)
+/lib
+
+# Env / keys (never commit)
+.env
+*.key.json
+.deployer.json
+.destinations.json
